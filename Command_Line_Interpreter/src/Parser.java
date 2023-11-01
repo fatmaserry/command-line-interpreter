@@ -1,8 +1,14 @@
+/**
+* This class is responsible for parsing the input entered by the user
+*/
 public class Parser {
+    
     String commandName;
     String[] args;
-    // This method will divide the input into commandName and args
-    // where "input" is the string command entered by the user
+    /*
+    * This method will divide the input into commandName and args 
+    * where "input" is the string command entered by the user
+    */ 
     public boolean parse(String input) {
         String[] tokens = input.trim().split("\\s+");
         if (tokens.length > 0) {
@@ -14,10 +20,16 @@ public class Parser {
         return false;
     }
 
+    /*
+     * This method will return the commandName
+     */
     public String getCommandName() {
         return commandName;
     }
 
+    /*
+     * This method will return the args
+     */
     public String[] getArgs() {
         return args;
     }
