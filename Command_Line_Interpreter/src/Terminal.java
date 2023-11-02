@@ -3,20 +3,20 @@ import java.io.*;
 import java.util.*;
 
 @SuppressWarnings("ALL")
-/*
+/**
  * The Terminal class is used to handle the user input and execute the commands.
  */
 public class Terminal {
-    /*
+    /**
      * The parser object is used to parse the user input into a command name and arguments.
      */
     Parser parser;
-    /*
+    /**
      * The commandHistory list is used to store the commands entered by the user.
      */
     private List<String> commandHistory = new ArrayList<>();
 
-    /*
+    /**
      * The Terminal constructor initializes the parser object.
      */
     public Terminal() {
@@ -49,7 +49,6 @@ public class Terminal {
         return currentDirectory;
     }
 
-  
     /**
      * Changes the current directory to the specified directory.
      *
@@ -154,19 +153,25 @@ public class Terminal {
     * @return void
     */
     public void mkdir(String... paths) {
-
+//        for (String path : paths) {
+//            File directory = new File(path);
+//            if (!directory.exists()) {
+//                directory.mkdir();
+//            } else {
+//                System.out.println("mkdir: cannot create directory " + path + ": File exists");
+//            }
+//        }
         for (String path : paths) {
-            /* mkdir function returns true if the directory is created, false otherwise */
             boolean flag;
             if (!FullPath(path)) {
-                /*
+                /**
                 * if the given string is directory name not a full path
                 * a new directory is created in the current directory.
                 */
                 String new_directory = pwd() + path;
                 flag = new File(new_directory).mkdir();
             } else {
-                /*In case the given string is the full path, create the directory*/ 
+                /*In case the given string is the full path, create the directory*/
                 flag = new File(path).mkdir();
             }
 
@@ -187,7 +192,7 @@ public class Terminal {
             if (file.isDirectory() && Objects.requireNonNull(file.list()).length == 0) {
                 boolean deleted = file.delete();
                 if (!deleted)
-                    System.out.println("this directory is not deleted");
+                    System.out.println("Directory " + file + " is not deleted");
             }
         }
     }
@@ -197,44 +202,53 @@ public class Terminal {
      * @param path string of the directory name
      * @return void
      */
-    public void rmdir(String path) {
+    public void rmdir(String... paths) {
         /*
-        * if the given argument = "*"remove
-        * all the empty directories in the current directory
-        */
+         * if the given argument = "*"
+         * remove all the empty directories in the current directory
+         */
         File current_directory;
-        if (Objects.equals(path, "*")) {
+        if (paths[0].equals("*")) {
             current_directory = new File(pwd());
             RemoveEmptyFiles(current_directory);
-        } 
-        else {
-            /*
-            * this part still needs to be updated
-            * the code removes file if name of full path is given but not in case relative
-            * (short) path is given
-            */
-            if (FullPath(path)) {
-                current_directory = new File(path);
-                current_directory.delete();
-                return;
+        } else {
+//            for (String path: paths) {
+//                File directory = new File(path);
+//                if (directory.exists() && directory.isDirectory()) {
+//                    if (directory.list().length == 0) {
+//                        if (!directory.delete()) {
+//                            System.err.println("Failed to delete: " + path);
+//                        }
+//                    } else {
+//                        System.err.println("rmdir: failed to remove " + path + ": Directory not empty");
+//                    }
+//                } else {
+//                    System.err.println("rmdir: failed to remove " + path + ": No such directory");
+//                }
+//            }
+            for (String path : paths) {
+                if (FullPath(path)) {
+                    current_directory = new File(path);
+                    current_directory.delete();
+                }
+                String full_path = new File(path).getAbsolutePath();
+                current_directory = new File(full_path);
+                boolean deleted = current_directory.delete();
+                if (!deleted)
+                    System.out.println("Directory " + path + " is not deleted");
             }
-            String full_path = new File(path).getAbsolutePath();
-            current_directory = new File(full_path);
-            boolean deleted = current_directory.delete();
-            if (!deleted)
-                System.out.println("this directory is not deleted");
         }
-
     }
 
     /**
      * 
-     * @param path the path of the file 
+     * @param path the path of the file
      * @return void
      */
-    public void touch(String path) {
+    public void touch(String path){
 
     }
+
 
     /**
      * Copies one or more files to a directory.
@@ -258,10 +272,12 @@ public class Terminal {
         String sourcePath = arguments[0];
         String destinationPath = arguments[1];
 
-        /*Check if the source exists*/ 
+        /**
+         * Check if the source exists
+         */
         Path source = Paths.get(sourcePath);
         if (!Files.exists(source)) {
-            System.out.println("Source does not exist.");
+            System.out.println("cp: cannot stat " + sourcePath + " : No such file or directory");
             return;
         }
 
@@ -281,16 +297,21 @@ public class Terminal {
         try {
             if (arguments.length == 2) {
                 if (isLastArgDirectory) {
-                    /* Error: Cannot copy multiple files to a directory with only two arguments */
+                    /**
+                     * Error: Cannot copy multiple files to a directory with only two arguments
+                     */
                     System.out.println("Error: Cannot copy multiple files to a directory with only two arguments.");
                 } else {
                     Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-                    System.out.println("File copied successfully.");
                 }
             } else {
-                /* Multiple source files provided*/ 
+                /**
+                 * Multiple source files provided
+                 */
                 if (!isLastArgDirectory) {
-                    /*Error: Last argument is not a directory*/ 
+                    /**
+                     * Error: Last argument is not a directory
+                     */
                     System.out.println("Error: Last argument is not a directory.");
                 } else {
                     /*Copy the source files into the destination directory */ 
@@ -300,7 +321,6 @@ public class Terminal {
                         Path targetFile = destination.resolve(sourceFile.getFileName());
                         Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
                     }
-                    System.out.println("Files copied successfully.");
                 }
             }
         } catch (IOException e) {
@@ -321,12 +341,11 @@ public class Terminal {
             File destDir = new File(args[1]);
             if (sourceDir.isDirectory() && destDir.isDirectory()) {
                 copyDirectoryFiles(sourceDir, destDir);
-                System.out.println("Copy directories: " + args[0] + " to " + args[1]);
             } else {
-                System.out.println("Both source and destination should be directories.");
+                System.out.println("Both source and destination should be directories");
             }
         } else {
-            System.out.println("Usage: cp -r source_directory destination");
+            System.out.println("Usage: cp -r source_directory destination_directory");
         }
     }
 
@@ -376,7 +395,9 @@ public class Terminal {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    /*Check if the user wants to exit */ 
+                    /**
+                     * Check if the user wants to exit
+                     */
                     if ("exit".equalsIgnoreCase(line)) {
                         break;
                     }
@@ -386,7 +407,9 @@ public class Terminal {
                 System.out.println(e.getMessage());
             }
         } else {
-            /*Concatenate and print the content of files */ 
+            /**
+            * Concatenate and print the content of files
+            */
             int index = 0;
             for (String fileName : fileNames) {
                 index++;
@@ -425,16 +448,14 @@ public class Terminal {
             File file = new File(fileName);
             if (file.exists()) {
                 if (file.isDirectory()) {
-                    System.out.println("Cannot remove a directory.");
+                    System.out.println("rm: cannot remove " + fileName + ": is a directory");
                 } else {
-                    if (file.delete()) {
-                        System.out.println("File " + fileName + " removed successfully.");
-                    } else {
-                        System.err.println("Error removing file " + fileName + ".");
+                    if (!file.delete()) {
+                        System.err.println("Error removing file " + fileName);
                     }
                 }
             } else {
-                System.err.println("File "+ fileName+ " not found.");
+                System.err.println("File "+ fileName+ "is not found");
             }
         }
     }
@@ -480,15 +501,27 @@ public class Terminal {
                 }
                 commandHistory.add(history);
 
-                /*Check if the command is 'cp' and it includes '-r' as an argument*/
+                /**
+                 * Check if the command is 'cp' and it includes '-r' as an argument
+                 */
                 if (commandName.equals("cp") && commandArgs.length > 0 && commandArgs[0].equals("-r")) {
                     /* Remove the '-r' from the arguments*/
                     String[] newArgs = new String[commandArgs.length - 1];
                     System.arraycopy(commandArgs, 1, newArgs, 0, commandArgs.length - 1);
                     /*Call the cp_r method*/
                     cp_r(newArgs);
-                } else {
-                    /*Handle commands based on commandName*/
+                }
+                /**
+                 * Check if the command is 'ls' and it includes '-r' as an argument
+                 */
+                else if (commandName.equals("ls") && commandArgs.length > 0 && commandArgs[0].equals("-r")) {
+                    List<String> fileList_lsr = ls_r();
+                    fileList_lsr.forEach(System.out::println);
+                }
+                else {
+                    /**
+                     * Handle commands based on commandName
+                     */
                     switch (commandName) {
                         case "echo":
                             String output = echo(commandArgs);
@@ -505,12 +538,8 @@ public class Terminal {
                             List<String> fileList = ls();
                             fileList.forEach(System.out::println);
                             break;
-                        case "ls-r":
-                            List<String> fileList_lsr = ls_r();
-                            fileList_lsr.forEach(System.out::println);
-                            break;
                         case "cp":
-                            Terminal.cp(commandArgs);
+                            cp(commandArgs);
                             break;
                         case "cat":
                             cat(commandArgs);
@@ -519,12 +548,14 @@ public class Terminal {
                             rm(commandArgs);
                             break;
                         case "mkdir":
-                            history();
+                            mkdir(commandArgs);
+                            break;
+                        case "rmdir":
+                            rmdir(commandArgs);
                             break;
                         case "history":
-                             history();
+                            history();
                             break;
-
                         default:
                             System.out.println("Command not supported: " + commandName);
                             break;

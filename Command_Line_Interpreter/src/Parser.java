@@ -5,7 +5,7 @@ public class Parser {
     
     String commandName;
     String[] args;
-    /*
+    /**
     * This method will divide the input into commandName and args 
     * where "input" is the string command entered by the user
     */ 
@@ -20,14 +20,14 @@ public class Parser {
         return false;
     }
 
-    /*
+    /**
      * This method will return the commandName
      */
     public String getCommandName() {
         return commandName;
     }
 
-    /*
+    /**
      * This method will return the args
      */
     public String[] getArgs() {
