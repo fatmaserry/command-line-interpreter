@@ -245,10 +245,21 @@ public class Terminal {
      * @param path the path of the file
      * @return void
      */
-    public void touch(String path){
-
+    public void touch(String fileName) {
+        Path filePath = Path.of(fileName);
+        try {
+            if (Files.exists(filePath)) {
+                // if the file exists update its access to append
+                Files.write(filePath, new byte[0], StandardOpenOption.APPEND);
+            } else {
+                // create file if not exists
+                Files.createFile(filePath);
+            }
+            System.out.println("File created or updated: " + filePath.toString());
+        } catch (IOException e) {
+            System.err.println("An error occurred");
+        }
     }
-
 
     /**
      * Copies one or more files to a directory.
@@ -480,7 +491,6 @@ public class Terminal {
     * @return void
     */
     public void chooseCommandAction() {
-
         System.out.println("Enter command: ");
         Scanner scanner = new Scanner(System.in);
         Parser parser = new Parser();
@@ -555,6 +565,9 @@ public class Terminal {
                             break;
                         case "history":
                             history();
+                            break;
+                        case "touch":
+                            touch(commandArgs[0]);
                             break;
                         default:
                             System.out.println("Command not supported: " + commandName);
