@@ -1,12 +1,47 @@
 import java.nio.file.*;
 import java.io.*;
 import java.util.*;
+import java.util.stream.Collectors;
+
+class Parser {
+
+    String commandName;
+    String[] args;
+    /**
+     * This method will divide the input into commandName and args
+     * where "input" is the string command entered by the user
+     */
+    public boolean parse(String input) {
+        String[] tokens = input.trim().split("\\s+");
+        if (tokens.length > 0) {
+            commandName = tokens[0];
+            args = new String[tokens.length - 1];
+            System.arraycopy(tokens, 1, args, 0, args.length);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * This method will return the commandName
+     */
+    public String getCommandName() {
+        return commandName;
+    }
+
+    /**
+     * This method will return the args
+     */
+    public String[] getArgs() {
+        return args;
+    }
+}
 
 @SuppressWarnings("ALL")
 /**
  * The Terminal class is used to handle the user input and execute the commands.
  */
-public class Terminal {
+class Terminal {
     /**
      * The parser object is used to parse the user input into a command name and arguments.
      */
@@ -140,16 +175,6 @@ public class Terminal {
     }
 
     /**
-     * Checks if it is a full path or not
-     *
-     * @param str the string of path
-     * @return boolean
-     */
-//    public boolean FullPath(String str) {
-//        return str.contains("C:\\Users");
-//    }
-
-    /**
      * Creates new directories
      *
      * @param paths an array of paths names
@@ -193,31 +218,34 @@ public class Terminal {
      * @param paths directories names
      * @return void
      */
-    public void rmdir(String... paths) {
+    public void rmdir(String[] paths) {
+        if (paths.length != 1) {
+            System.out.println("Usage: rmdir filepath or rmdir *");
+            return;
+        }
         /*
          if the given argument = "*"
          remove all the empty directories in the current directory
         */
         File current_directory;
-        if (paths[0].equals("*")) {
+        String path = paths[0];
+        if (path.equals("*")) {
             current_directory = new File(pwd());
             RemoveEmptyFiles(current_directory);
         } else {
             String currentDirectory = System.getProperty("user.dir");
+            File directory = new File(currentDirectory, path);
 
-            for (String path : paths) {
-                File directory = new File(currentDirectory, path);
-                if (directory.exists() && directory.isDirectory()) {
-                    if (directory.list().length == 0) {
-                        if (!directory.delete()) {
-                            System.err.println("Failed to delete: " + path);
-                        }
-                    } else {
-                        System.err.println( path + "is not empty!");
+            if (directory.exists() && directory.isDirectory()) {
+                if (directory.list().length == 0) {
+                    if (!directory.delete()) {
+                        System.err.println("Failed to delete: " + path);
                     }
                 } else {
-                    System.err.println("rmdir: failed to remove " + path + ": No such directory");
+                    System.err.println(path + "is not empty!");
                 }
+            } else {
+                System.err.println("rmdir: failed to remove " + path + ": No such directory");
             }
         }
     }
@@ -232,7 +260,7 @@ public class Terminal {
      */
     public void touch(String[] args) {
         if (args.length != 1) {
-            System.err.println("Usage: touch filename");
+            System.out.println("Usage: touch filename");
             return;
         }
         // fileName
@@ -253,7 +281,6 @@ public class Terminal {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     /**
@@ -264,54 +291,33 @@ public class Terminal {
      *
      * @param arguments An array of strings representing arguments.
      *                  The first element should be the source file, the second element
-     *                  should be the destination file or directory, and the last element
-     *                  (if present) should be the destination directory.
+     *                  should be the destination file.
      * @return void
      */
     public static void cp(String[] arguments) {
-        if (arguments.length < 2) {
-            System.err.println("Usage: cp source_file(s) destination");
+        if (arguments.length != 2) {
+            System.out.println("Usage: cp source_file destination_file");
             return;
         }
 
         String sourcePath = arguments[0];
-        String destinationPath = arguments[arguments.length - 1];
+        String destinationPath = arguments[1];
 
+        // resolve the source and destination path according to
+        // the current directory
         Path currentDirectory = Paths.get(System.getProperty("user.dir"));
         Path source = currentDirectory.resolve(sourcePath);
         Path destination = currentDirectory.resolve(destinationPath);
 
         try {
-            if (arguments.length == 2) {
-                if (!Files.exists(source)) {
-                    System.err.println("cp: cannot stat '" + source + "': No such file or directory");
-                    return;
-                }
-
-                if (!Files.exists(destination.getParent())) {
-                    Files.createDirectories(destination.getParent());
-                }
-
-                Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
-            } else if (arguments.length > 2) {
-                if (!Files.exists(destination)) {
-                    System.err.println("cp: cannot copy '" + destination + "': No such file or directory");
-                    return;
-                } else if (!Files.isDirectory(destination)) {
-                    System.err.println("cp: target '" + destination + "' is not a directory");
-                    return;
-                }
-
-                for (int i = 0; i < arguments.length - 1; i++) {
-                    sourcePath = arguments[i];
-                    source = currentDirectory.resolve(sourcePath);
-                    if (Files.exists(source)) {
-                        Path destinationFile = destination.resolve(source.getFileName());
-                        Files.copy(source, destinationFile, StandardCopyOption.REPLACE_EXISTING);
-                        System.out.println("Copied '" + source + "' to '" + destinationFile + "'");
-                    }
-                }
+            if (!Files.exists(source)) {
+                System.err.println("cp: cannot stat '" + source + "': No such file");
+                return;
             }
+            if (!Files.exists(destination.getParent())) {
+                Files.createDirectories(destination.getParent());
+            }
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -325,56 +331,61 @@ public class Terminal {
      * @return void
      */
     public void cp_r(String[] args) {
-        if (args.length == 2) {
-            String source = args[0];
-            String destination = args[1];
-
-            Path currentDirectory = Paths.get(System.getProperty("user.dir")).toAbsolutePath().normalize();
-            Path sourcePath = currentDirectory.resolve(source).toAbsolutePath().normalize();
-            Path destinationPath = currentDirectory.resolve(destination).toAbsolutePath().normalize();
-
-            if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) {
-                System.err.println("Source directory does not exist");
-                return;
-            }
-
-            if (!Files.exists(destinationPath) || !Files.isDirectory(destinationPath)) {
-                System.err.println("Destination directory does not exist");
-                return;
-            }
-
-            File sourceDir = sourcePath.toFile();
-            File destDir = destinationPath.toFile();
-            copyDirectoryFiles(sourceDir, destDir);
-        } else {
+        if (args.length != 2) {
             System.out.println("Usage: cp -r source_directory destination_directory");
+            return;
         }
+        String source = args[0];
+        String destination = args[1];
+
+        // toAbsolutePath : converts a relative path to an absolute path
+        // Absolute paths start from the root of the file system
+        Path currentDirectory = Paths.get(System.getProperty("user.dir")).toAbsolutePath();
+        Path sourcePath = currentDirectory.resolve(source).toAbsolutePath();
+        Path destinationPath = currentDirectory.resolve(destination).toAbsolutePath();
+
+        if (!Files.exists(sourcePath) || !Files.isDirectory(sourcePath)) {
+            System.err.println("Source directory does not exist");
+            return;
+        }
+
+        if (!Files.exists(destinationPath) || !Files.isDirectory(destinationPath)) {
+            System.err.println("Destination directory does not exist");
+            return;
+        }
+
+        // create new destination with same name
+        // of the old inside the previous one
+        Path newDestination = destinationPath.resolve(sourcePath.getFileName());
+        copyDirectoryFiles(sourcePath, newDestination);
     }
 
     /**
      * Recursively copies the files and subdirectories from a source directory to a destination directory.
      *
-     * @param sourceDir The source directory to copy.
-     * @param destDir The destination directory where the files and subdirectories will be copied.
+     * @param source      The path of source directory to copy.
+     * @param destination The path of destination directory where the files and subdirectories will be copied.
      * @return void
      */
-    private static void copyDirectoryFiles(File sourceDir, File destDir) {
-        File[] sourceFiles = sourceDir.listFiles();
-        if (sourceFiles != null) {
-            for (File sourceFile : sourceFiles) {
-                File destFile = new File(destDir, sourceFile.getName());
+    private static void copyDirectoryFiles(Path source, Path destination) {
+        try {
+            // Convert a stream of elements to a List
+            List<Path> files = Files.list(source).collect(Collectors.toList());
+            for (Path file : files) {
+                // Calculates the relative path from the source directory
+                // to the current file or directory being processed within the source directory
+                // then appends this relative path to the destination directory
+                Path destFile = destination.resolve(source.relativize(file));
 
-                if (sourceFile.isDirectory()) {
-                    destFile.mkdir();
-                    copyDirectoryFiles(sourceFile, destFile);
+                if (Files.isDirectory(file)) {
+                    Files.createDirectories(destFile);
+                    copyDirectoryFiles(file, destFile);
                 } else {
-                    try {
-                        Files.copy(sourceFile.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
+                    Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
+        } catch (IOException e) {
+            System.err.println("Error copying directory: " + e.getMessage());
         }
     }
 
@@ -386,13 +397,17 @@ public class Terminal {
      *
      * Use "exit" to exit the user input mode.
      *
-     * @param fileNames An array of file names.
+     * @param args An array of file paths.
      * @return void
      */
-    public void cat(String[] fileNames) {
+    public void cat(String[] args) {
+        if (args.length > 2) {
+            System.out.println("Usage: cat filepath or cat filepath_1 filepath_2");
+            return;
+        }
         Path currentDirectory = Paths.get(System.getProperty("user.dir"));
 
-        if (fileNames.length == 0) {
+        if (args.length == 0) {
             // Read input from the user and print it
             // if user doesn't enter filename
             try {
@@ -409,8 +424,9 @@ public class Terminal {
                 System.out.println(e.getMessage());
             }
         } else {
-            // Concatenate and print the content of files
-            for (String fileName : fileNames) {
+            // print just one file content or
+            // concatenate and print the content of files
+            for (String fileName : args) {
                 Path filePath = currentDirectory.resolve(fileName);
                 File file = filePath.toFile();
 
@@ -438,29 +454,31 @@ public class Terminal {
      * If it's a directory, it cannot be removed.
      * If it's a file, the method attempts to delete it.
      *
-     *
-     * @param fileNames An array of file names to remove.
+     * @param args An array of file paths to remove.
      * @return void
      */
-    public void rm(String[] fileNames) {
+    public void rm(String[] args) {
+        if (args.length != 1) {
+            System.out.println("Usage: rm filepath");
+            return;
+        }
+
         try {
             Path currentDirectory = Paths.get(System.getProperty("user.dir"));
+            String fileName = args[0];
+            Path filePath = currentDirectory.resolve(fileName);
+            File file = filePath.toFile();
 
-            for (String fileName : fileNames) {
-                Path filePath = currentDirectory.resolve(fileName);
-                File file = filePath.toFile();
-
-                if (file.exists()) {
-                    if (file.isDirectory()) {
-                        System.out.println("rm: cannot remove " + fileName + ": is a directory");
-                    } else {
-                        if (!file.delete()) {
-                            System.err.println("Error removing file " + fileName);
-                        }
-                    }
+            if (file.exists()) {
+                if (file.isDirectory()) {
+                    System.out.println("rm: cannot remove " + fileName + ": is a directory");
                 } else {
-                    System.out.println( fileName + ": No such file!");
+                    if (!file.delete()) {
+                        System.err.println("Error removing file " + fileName);
+                    }
                 }
+            } else {
+                System.out.println(fileName + ": No such file!");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -470,12 +488,12 @@ public class Terminal {
     /**
      * Displays an enumerated list with the
      * commands you’ve used in the past
-     * 
+     *
      * @return void
      */
-    public void history(){
+    public void history() {
         for (int i = 0; i < commandHistory.size(); i++) {
-            System.out.println((i+1)+"   "+commandHistory.get(i));
+            System.out.println((i + 1) + "   " + commandHistory.get(i));
         }
     }
 
@@ -486,44 +504,44 @@ public class Terminal {
      * @return void
      */
     public void wc(String[] args) {
-        if (args.length == 1) {
-            // fileName
-            // The name of the text file to analyze.
-            String fileName = args[0];
-            Path currentDirectory = Paths.get(System.getProperty("user.dir"));
-            Path filePath = currentDirectory.resolve(fileName).toAbsolutePath().normalize();
-            File file = filePath.toFile();
+        if (args.length != 1) {
+            System.out.println("Usage: wc file_name");
+            return;
+        }
+        // fileName
+        // The name of the text file to analyze.
+        String fileName = args[0];
+        Path currentDirectory = Paths.get(System.getProperty("user.dir"));
+        Path filePath = currentDirectory.resolve(fileName).toAbsolutePath().normalize();
+        File file = filePath.toFile();
 
-            if (file.exists() && file.isFile()) {
-                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                    String line;
-                    int lineCount = 0, wordCount = 0, charCount = 0;
+        if (file.exists() && file.isFile()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                int lineCount = 0, wordCount = 0, charCount = 0;
 
-                    while ((line = reader.readLine()) != null) {
-                        lineCount++;
-                        charCount += line.length();
-                        String[] words = line.split("\\s+");
-                        wordCount += words.length;
-                    }
-
-                    System.out.println(lineCount + " " + wordCount + " " + charCount + " " + fileName);
-                } catch (IOException e) {
-                    System.err.println("Error reading the file: " + fileName);
+                while ((line = reader.readLine()) != null) {
+                    lineCount++;
+                    charCount += line.length();
+                    String[] words = line.split("\\s+");
+                    wordCount += words.length;
                 }
-            } else {
-                System.err.println("File '" + fileName + "' does not exist.");
+
+                System.out.println(lineCount + " " + wordCount + " " + charCount + " " + fileName);
+            } catch (IOException e) {
+                System.err.println("Error reading the file: " + fileName);
             }
         } else {
-            System.out.println("Usage: wc file_name");
+            System.err.println("File '" + fileName + "' does not exist.");
         }
     }
 
     /**
-    * This method will choose the suitable command method to be called
-    * based on the user input.
-    *
-    * @return void
-    */
+     * This method will choose the suitable command method to be called
+     * based on the user input.
+     *
+     * @return void
+     */
     public void chooseCommandAction() {
         System.out.println("Enter command: ");
         Scanner scanner = new Scanner(System.in);
@@ -531,7 +549,7 @@ public class Terminal {
 
         while (true) {
             String input = scanner.nextLine();
-           
+
             if (input.equalsIgnoreCase("exit")) {
                 break;
             }
@@ -539,7 +557,7 @@ public class Terminal {
                 String commandName = parser.getCommandName();
                 String[] commandArgs = parser.getArgs();
 
-                String history=commandName+" ";
+                String history = commandName + " ";
                 for (int i = 0; i < commandArgs.length; i++) {
                     history += commandArgs[i] + " ";
                 }
@@ -557,8 +575,7 @@ public class Terminal {
                 else if (commandName.equals("ls") && commandArgs.length > 0 && commandArgs[0].equals("-r")) {
                     List<String> fileList_lsr = ls_r();
                     fileList_lsr.forEach(System.out::println);
-                }
-                else {
+                } else {
                     // Handle commands based on commandName
                     switch (commandName) {
                         case "echo":
@@ -610,5 +627,12 @@ public class Terminal {
             }
         }
         scanner.close();
+    }
+}
+
+class Main {
+    public static void main(String[] args) {
+        Terminal terminal = new Terminal();
+        terminal.chooseCommandAction();
     }
 }
