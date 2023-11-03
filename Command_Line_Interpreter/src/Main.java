@@ -3,6 +3,16 @@ import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/*
+    Author 1: Fatma Elzahraa Ashraf - 20220428
+    Author 2: Habiba Elbehairy - 20210121
+    Author 3: Saif Hazem - 20210165
+    Author 4: Abdelrahman Gomaa - 20210224
+
+    Description:
+    This Command Line Interpreter (CLI) is implemented in the Java Programming Language.
+*/
+
 class Parser {
 
     String commandName;
