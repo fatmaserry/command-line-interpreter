@@ -329,7 +329,7 @@ class Terminal {
             }
             Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("Error Usage: cp source_file destination_file");
         }
     }
 
